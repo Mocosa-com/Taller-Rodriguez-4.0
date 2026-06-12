@@ -1,0 +1,6 @@
+{
+  "name": "Taller Rodríguez",
+  "description": "Sistema de gestión integral para taller mecánico: control de vehículos, caja, inventario, facturas, clientes, empleados y ofertas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

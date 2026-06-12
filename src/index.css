@@ -1,0 +1,149 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Redefining Slate family to a premium light Lavender-Grey palette from the requested image */
+  --color-slate-50: #fafafc;   /* Pure white/light grayish background tint */
+  --color-slate-100: #1c0b19;  /* Headings map to Midnight Violet */
+  --color-slate-200: #180c34;  /* Default body copy text maps to Dark Amethyst */
+  --color-slate-300: #494268;  /* Subtitles/labels map to Vintage Grape */
+  --color-slate-350: #180c34;  /* Dark Amethyst for premium readable text */
+  --color-slate-400: #494268;  /* Muted descriptions/details */
+  --color-slate-500: #7a779c;  /* Muted placeholders/icons */
+  --color-slate-600: #7a779c;  /* Muted controls */
+  --color-slate-750: #dedbe9;
+  --color-slate-700: #494268;  /* Medium grape labels */
+  --color-slate-800: #e2e1ec;  /* Main delicate border line (Lavender-Slate) */
+  --color-slate-850: #dfdde9;  /* Secondary border line */
+  --color-slate-900: #ffffff;  /* Card & Section backgrounds map to Pure White! */
+  --color-slate-950: #f4f3f6;  /* Inner backdrop/Body wrapper is a gorgeous light Lavender-Grey */
+
+  /* Redefining Violet & fuchsia to represent the premium Violet tones from the image */
+  --color-violet-50: #f5f4f8;  /* Extremely light violet/slate */
+  --color-violet-100: #eceaf1; /* Light violet */
+  --color-violet-200: #c1bfd1; /* Pale Slate */
+  --color-violet-350: #a2a0bc;
+  --color-violet-300: #7a779c; /* Lavender Grey */
+  --color-violet-400: #7a779c; /* Lavender Grey */
+  --color-violet-500: #494268; /* Vintage Grape primary */
+  --color-violet-600: #180c34; /* Dark Amethyst primary button bg */
+  --color-violet-700: #1c0b19; /* Midnight Violet deep accent */
+  --color-violet-800: #1c0b19;
+  --color-violet-900: #0c040d;
+  --color-violet-950: #0c040d;
+
+  --color-fuchsia-50: #faf9fb;
+  --color-fuchsia-100: #f0edf6;
+  --color-fuchsia-200: #c1bfd1; /* Pale Slate */
+  --color-fuchsia-300: #a2a0bc;
+  --color-fuchsia-400: #7a779c; /* Lavender Grey */
+  --color-fuchsia-500: #494268; /* Vintage Grape complementary */
+  --color-fuchsia-600: #1c0b19; /* Midnight Violet gradient end */
+  --color-fuchsia-650: #180c34; /* Dark Amethyst */
+  --color-fuchsia-700: #180c34;
+  --color-fuchsia-800: #0c040d;
+  --color-fuchsia-900: #0c040d;
+}
+
+/* Custom CSS overrides to guarantee gorgeous contrast for elements in a light environment */
+#app-sidebar {
+  background-color: #180c34 !important; /* Keep sidebar Dark Amethyst for premium look */
+  border-right-color: #1c0b19 !important;
+}
+#app-sidebar .text-slate-100, 
+#app-sidebar .text-white,
+#app-sidebar .text-slate-350,
+#app-sidebar p.text-white,
+#app-sidebar h2.text-white {
+  color: #ffffff !important;
+}
+#app-sidebar .text-slate-300 {
+  color: #c1bfd1 !important;
+}
+#app-sidebar .text-slate-400 {
+  color: #c1bfd1 !important;
+}
+#app-sidebar hover\:text-white:hover {
+  color: #ffffff !important;
+}
+
+/* Ensure headings inside active views are dark and stylish rather than white */
+.text-white:not(button):not(button *):not(input):not(textarea):not(.bg-gradient-to-r):not(.bg-gradient-to-r *):not(.bg-gradient-to-tr):not(.bg-gradient-to-tr *):not(.bg-violet-600):not(.bg-violet-600 *):not(.bg-emerald-600):not(.bg-emerald-600 *):not(.bg-amber-600):not(.bg-amber-600 *):not(.bg-cyan-600):not(.bg-cyan-600 *):not(.bg-rose-650):not(.bg-rose-650 *):not(.bg-red-500):not(.bg-red-500 *):not(.bg-red-600):not(.bg-red-600 *):not(.text-white-override) {
+  color: #180c34 !important;
+}
+
+/* Inputs, textareas and selects are now on light backgrounds (bg-slate-900/950),
+   so any text-white on them needs to become dark to remain legible */
+input.text-white,
+textarea.text-white,
+select.text-white {
+  color: #180c34 !important;
+}
+input.text-white::placeholder,
+textarea.text-white::placeholder {
+  color: #7a779c !important;
+}
+
+/* Force actual crisp white text for buttons, inputs, active elements or on-dark elements */
+button.text-white,
+button .text-white,
+.text-white-override,
+[class*="bg-violet-"],
+[class*="bg-violet-"] *,
+[class*="bg-gradient-"],
+[class*="bg-gradient-"] *,
+[class*="bg-emerald-600"],
+[class*="text-white-override"] {
+  --color-text-white: #ffffff;
+}
+
+button.text-white,
+button .text-white,
+.text-white-override,
+[class*="bg-violet-600"].text-white,
+[class*="bg-violet-500"].text-white,
+[class*="bg-violet-700"].text-white,
+[class*="bg-gradient-"].text-white,
+[class*="bg-emerald-600"].text-white,
+[class*="bg-emerald-500"].text-white,
+[class*="bg-rose-600"].text-white {
+  color: #ffffff !important;
+}
+
+/* Ensure buttons and gradients keep their white text perfectly legible */
+.bg-gradient-to-r, .bg-gradient-to-tr, .bg-violet-600, .bg-emerald-650, .bg-emerald-600, .bg-rose-600, .bg-cyan-600, .bg-teal-600 {
+  color: #ffffff;
+}
+.bg-gradient-to-r *, .bg-gradient-to-tr *, .bg-violet-600 *, .bg-emerald-650 *, .bg-emerald-600 *, .bg-rose-600 *, .bg-cyan-600 *, .bg-teal-600 * {
+  --color-text-white: #ffffff;
+}
+
+#role-quick-switcher, #month-filter-dropdown {
+  background-color: #ffffff !important;
+  color: #180c34 !important;
+  border-color: #e2e1ec !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #7a779c !important;
+}
+
+/* Custom scrollbar config for gorgeous interfaces */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
