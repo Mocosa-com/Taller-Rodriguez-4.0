@@ -224,28 +224,6 @@ export function PerfilEditar({ currentUser, onUpdateCurrentUser, onLogout }: Per
               <p className="text-[10px] text-slate-500 mt-1">Con esta clave podrá entrar al taller en la pantalla de inicio.</p>
             </div>
 
-            <div>
-              <label className="block mb-2 text-slate-400">Foto / Avatar</label>
-              <div className="flex justify-center bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                <div className="relative inline-block group/avatar">
-                  <img 
-                    src={avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'} 
-                    alt="Avatar" 
-                    referrerPolicy="no-referrer"
-                    className="w-20 h-20 rounded-full object-cover border-4 border-violet-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => alert("Simulación: Cambiar foto de perfil")}
-                    className="absolute inset-0 rounded-full bg-black/50 text-white flex items-center justify-center gap-1 text-[9px] font-black opacity-0 group-hover/avatar:opacity-100 transition-opacity cursor-pointer"
-                  >
-                    <Image className="w-3.5 h-3.5" />
-                    Editar
-                  </button>
-                </div>
-              </div>
-            </div>
-
             <div className="flex gap-2 pt-2">
               <button
                 type="button"

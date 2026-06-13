@@ -73,7 +73,7 @@
 
 /* Ensure headings inside active views are dark and stylish rather than white */
 .text-white:not(button):not(button *):not(input):not(textarea):not(.bg-gradient-to-r):not(.bg-gradient-to-r *):not(.bg-gradient-to-tr):not(.bg-gradient-to-tr *):not(.bg-violet-600):not(.bg-violet-600 *):not(.bg-emerald-600):not(.bg-emerald-600 *):not(.bg-amber-600):not(.bg-amber-600 *):not(.bg-cyan-600):not(.bg-cyan-600 *):not(.bg-rose-650):not(.bg-rose-650 *):not(.bg-red-500):not(.bg-red-500 *):not(.bg-red-600):not(.bg-red-600 *):not(.text-white-override) {
-  color: #180c34 !important;
+  color: #3f3b52 !important;
 }
 
 /* Inputs, textareas and selects are now on light backgrounds (bg-slate-900/950),
@@ -81,7 +81,7 @@
 input.text-white,
 textarea.text-white,
 select.text-white {
-  color: #180c34 !important;
+  color: #3f3b52 !important;
 }
 input.text-white::placeholder,
 textarea.text-white::placeholder {

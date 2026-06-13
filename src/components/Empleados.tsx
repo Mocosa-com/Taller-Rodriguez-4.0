@@ -426,7 +426,96 @@ export function Empleados({
 
       {/* Main Table list (Page 6) with high contrast colors! */}
       <div className="bg-slate-900/40 backdrop-blur-md rounded-3xl border border-slate-800 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+
+        {/* Mobile card list */}
+        <div className="md:hidden divide-y divide-slate-800/80">
+          {filteredEmpleados.map((emp) => (
+            <div key={emp.id} className="p-4 space-y-3 text-xs">
+              <div className="flex items-center gap-3">
+                <img 
+                  src={emp.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200'}
+                  alt={emp.nombre}
+                  referrerPolicy="no-referrer"
+                  className="w-11 h-11 rounded-full object-cover border border-slate-800 flex-shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="font-extrabold text-white text-sm">{emp.nombre}</div>
+                  <div className="text-[10px] text-slate-400 font-medium space-y-0.5">
+                    <div>{emp.cargo} • Telf: {emp.telefono}</div>
+                    {emp.correo && (
+                      <div className="text-violet-400 font-mono text-[10px] lowercase flex items-center gap-1 truncate">
+                        <span className="text-slate-500">@</span>{emp.correo}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <div className="font-mono font-bold text-white text-sm">${emp.sueldoBase.toFixed(2)}</div>
+                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">{emp.dui}</div>
+                </div>
+              </div>
+
+              {emp.porcentajeGanancia ? (
+                <span className="bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2.5 py-1 rounded-full text-[10px] font-bold inline-block">
+                  {emp.porcentajeGanancia}% de ganancia
+                </span>
+              ) : (
+                <span className="text-slate-500 italic text-[10px]">Sin porcentaje</span>
+              )}
+
+              <div className="flex items-center justify-end gap-1.5 pt-1">
+                <button
+                  onClick={() => handleOpenStats(emp)}
+                  className="p-2 text-emerald-600 hover:text-white bg-slate-950 hover:bg-emerald-600 border border-slate-800 rounded-xl transition-all cursor-pointer"
+                  title="Visualizar Carga de Trabajo, Coche y Saldo"
+                >
+                  <Briefcase className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => handleOpenVacaciones(emp)}
+                  className="p-2 text-violet-600 hover:text-white bg-slate-950 hover:bg-violet-600 border border-slate-800 rounded-xl transition-all cursor-pointer"
+                  title="Registrar y ver vacaciones"
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => handleOpenEdit(emp)}
+                  className="p-2 text-orange-600 hover:text-white bg-slate-950 hover:bg-orange-600 border border-slate-800 rounded-xl transition-all cursor-pointer"
+                  title="Editar"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => {
+                    if (window.confirm(`¿Seguro de remover al empleado ${emp.nombre}?`)) {
+                      onDeleteEmpleado(emp.id);
+                    }
+                  }}
+                  className="p-2 text-red-600 hover:text-white bg-slate-950 hover:bg-red-600 border border-slate-800 rounded-xl transition-all cursor-pointer"
+                  title="Eliminar"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => handleOpenReport(emp)}
+                  className="p-2 text-indigo-600 hover:text-white bg-slate-950 hover:bg-indigo-600 border border-slate-800 rounded-xl transition-all cursor-pointer"
+                  title="Filing Report Card (Reportar comportamiento)"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {filteredEmpleados.length === 0 && (
+            <div className="text-center py-10 font-medium text-slate-400 italic text-xs">
+              Sin empleados encontrados en este momento.
+            </div>
+          )}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-950/40 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-800">
@@ -485,7 +574,7 @@ export function Empleados({
                         {/* Page 6 requested detail button: "Visualizar carros trabajando y estimación" */}
                         <button
                           onClick={() => handleOpenStats(emp)}
-                          className="p-2 text-emerald-400 bg-slate-950 hover:bg-emerald-650/30 border border-slate-800 rounded-xl transition-all cursor-pointer"
+                          className="p-2 text-emerald-600 hover:text-white bg-slate-950 hover:bg-emerald-600 border border-slate-800 rounded-xl transition-all cursor-pointer"
                           title="Visualizar Carga de Trabajo, Coche y Saldo"
                         >
                           <Briefcase className="w-3.5 h-3.5" />
@@ -501,7 +590,7 @@ export function Empleados({
 
                         <button
                           onClick={() => handleOpenEdit(emp)}
-                          className="p-2 text-orange-400 bg-slate-950 hover:bg-orange-650/30 border border-slate-800 rounded-xl transition-all cursor-pointer"
+                          className="p-2 text-orange-600 hover:text-white bg-slate-950 hover:bg-orange-600 border border-slate-800 rounded-xl transition-all cursor-pointer"
                           title="Editar"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
@@ -513,7 +602,7 @@ export function Empleados({
                               onDeleteEmpleado(emp.id);
                             }
                           }}
-                          className="p-2 text-red-400 bg-slate-950 hover:bg-red-650/30 border border-slate-800 rounded-xl transition-all cursor-pointer"
+                          className="p-2 text-red-600 hover:text-white bg-slate-950 hover:bg-red-600 border border-slate-800 rounded-xl transition-all cursor-pointer"
                           title="Eliminar"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -521,7 +610,7 @@ export function Empleados({
 
                         <button
                           onClick={() => handleOpenReport(emp)}
-                          className="p-2 text-indigo-400 bg-slate-950 hover:bg-indigo-650/30 border border-slate-800 rounded-xl transition-all cursor-pointer"
+                          className="p-2 text-indigo-600 hover:text-white bg-slate-950 hover:bg-indigo-600 border border-slate-800 rounded-xl transition-all cursor-pointer"
                           title="Filing Report Card (Reportar comportamiento)"
                         >
                           <AlertTriangle className="w-3.5 h-3.5" />

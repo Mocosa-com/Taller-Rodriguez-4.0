@@ -104,7 +104,7 @@ export function MenuDashboard({
       </div>
 
       {/* Grid of clean white cards styled exactly as the image */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-6">
         {menuCards.map((card) => {
           return (
             <button
@@ -138,10 +138,6 @@ export function MenuDashboard({
         })}
       </div>
 
-      {/* Aesthetic bottom system details for premium appearance */}
-      <div className="text-center text-[10px] text-slate-500 font-mono pt-4 select-none">
-        Taller Rodríguez ERP • Diseñado para Alta Costura y Eficiencia Operativa
-      </div>
     </div>
   );
 }

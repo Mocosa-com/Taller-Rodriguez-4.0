@@ -336,7 +336,7 @@ export function Dashboard({
                     </div>
                   </div>
                   {/* Label */}
-                  <span className="text-xs text-slate-400 font-sans font-medium mt-3.5 group-hover:text-white transition-colors">
+                  <span className="text-xs text-slate-400 font-sans font-medium mt-3.5 group-hover:text-slate-700 transition-colors">
                     {week.name}
                   </span>
                 </div>

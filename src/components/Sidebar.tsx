@@ -202,7 +202,7 @@ export function Sidebar({
             <p className="text-[10px] font-extrabold text-slate-100 truncate leading-tight">
               {currentUser.nombre}
             </p>
-            <p className="text-[8px] text-violet-400 font-extrabold truncate uppercase tracking-wide">
+            <p className="text-[10px] text-violet-400 font-extrabold truncate uppercase tracking-wide">
               {currentUser.cargo}
             </p>
           </div>

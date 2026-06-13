@@ -546,8 +546,8 @@ export default function App() {
         <div className="w-full max-w-md bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-7 relative z-10 shadow-2xl space-y-6">
           
           <div className="text-center space-y-2">
-            <div className="inline-flex p-2 rounded-2xl bg-gradient-to-tr from-violet-500 to-fuchsia-500 shadow-lg rotate-3">
-              <img src="/assets/logo_taller.png" alt="Logo Taller Rodríguez" className="w-10 h-10 object-contain rounded-xl" />
+            <div className="inline-flex p-2">
+              <img src="/assets/logo_taller.png" alt="Logo Taller Rodríguez" className="w-16 h-16 object-contain" />
             </div>
             
             <h1 className="text-2xl font-black font-display text-white tracking-tight mt-3">
@@ -634,10 +634,6 @@ export default function App() {
             </div>
           </div>
 
-        </div>
-
-        <div className="text-[10px] text-slate-500 mt-6 font-mono">
-          Taller Rodríguez • ERP Modernizado • El Salvador
         </div>
       </div>
     );
