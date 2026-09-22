@@ -1,0 +1,12 @@
+export { Caja } from '../components/Caja';
+export { Clientes } from '../components/Clientes';
+export { Dashboard } from '../components/Dashboard';
+export { Empleados } from '../components/Empleados';
+export { Facturacion } from '../components/Facturacion';
+export { Inventario } from '../components/Inventario';
+export { MenuDashboard } from '../components/MenuDashboard';
+export { Offers } from '../components/Offers';
+export { PerfilEditar } from '../components/PerfilEditar';
+export { Proveedores } from '../components/Proveedores';
+export { Sidebar, type ActiveView } from '../components/Sidebar';
+export { Vehiculos } from '../components/Vehiculos';

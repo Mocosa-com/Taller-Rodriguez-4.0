@@ -1,5 +1,6 @@
 import React from 'react';
 import { ActiveView } from './Sidebar';
+import { ArrowUpRight, CheckCircle2, CircleAlert, Gauge } from 'lucide-react';
 
 interface MenuDashboardProps {
   onSetView: (view: ActiveView) => void;
@@ -85,54 +86,79 @@ export function MenuDashboard({
   ];
 
   return (
-    <div className="w-full max-w-5xl mx-auto py-8 px-4 md:px-8 space-y-12 animate-in fade-in duration-300">
+    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-7 px-1 py-4 animate-in fade-in duration-300 md:px-6 md:py-8">
       
-      {/* Centered Premium Logo and Header styling mimicking screenshot */}
-      <div className="flex flex-col items-center justify-center gap-4 text-center">
-        <div className="flex items-center gap-4 bg-white/90 shadow-sm border border-slate-200/60 p-4 px-8 rounded-full">
-          {/* Real workshop logo on a dark circle for contrast (logo has light/white details) */}
-          <div className="relative w-12 h-12 flex items-center justify-center bg-slate-900 rounded-full border border-slate-200 shadow-inner flex-shrink-0 overflow-hidden p-1.5">
+      <div className="relative overflow-hidden rounded-[2rem] bg-slate-900 px-6 py-7 text-white shadow-xl shadow-slate-900/10 md:px-10 md:py-9">
+        <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-violet-500/25 blur-3xl" />
+        <div className="relative flex min-w-0 flex-col gap-7 md:flex-row md:items-end md:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="relative flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10 p-2 ring-1 ring-white/15">
             <img src="/assets/logo_taller.png" alt="Logo Taller Rodríguez" className="w-full h-full object-contain" />
+            </div>
+            <div className="min-w-0">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.24em] text-violet-300">Centro de operaciones</p>
+              <h1 className="truncate font-display text-2xl font-bold tracking-tight md:text-3xl">Taller Rodríguez</h1>
+              <p className="mt-1 truncate text-sm text-slate-300">Todo listo para coordinar el día.</p>
+            </div>
           </div>
-          <h1 className="text-2xl md:text-3xl font-display font-black text-slate-900 tracking-tight select-none">
-            Taller Rodriguez
-          </h1>
+          <div className="grid w-full min-w-0 grid-cols-3 gap-2 md:w-[330px] md:flex-shrink-0">
+            <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/10">
+              <Gauge className="mb-2 h-4 w-4 text-cyan-300" />
+              <p className="text-xl font-bold">{activeVehiculosCount}</p>
+              <p className="text-[10px] uppercase tracking-wide text-slate-300">En taller</p>
+            </div>
+            <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/10">
+              <CircleAlert className="mb-2 h-4 w-4 text-amber-300" />
+              <p className="text-xl font-bold">{lowStockCount}</p>
+              <p className="text-[10px] uppercase tracking-wide text-slate-300">Alertas</p>
+            </div>
+            <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/10">
+              <CheckCircle2 className="mb-2 h-4 w-4 text-emerald-300" />
+              <p className="text-xl font-bold">{activeTurnoState ? 'OK' : '--'}</p>
+              <p className="text-[10px] uppercase tracking-wide text-slate-300">Caja</p>
+            </div>
+          </div>
         </div>
-        <p className="text-xs text-slate-400 max-w-sm mt-1 uppercase tracking-widest font-mono">
-          Sistema de Control & Operaciones
-        </p>
       </div>
 
-      {/* Grid of clean white cards styled exactly as the image */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-6">
+      <div className="flex items-end justify-between px-1">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-violet-500">Accesos rápidos</p>
+          <h2 className="mt-1 font-display text-xl font-bold text-slate-100">¿Qué necesitas gestionar?</h2>
+        </div>
+        <span className="hidden text-xs font-medium text-slate-500 sm:block">10 módulos disponibles</span>
+      </div>
+
+      <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3 sm:grid-cols-[repeat(auto-fit,minmax(175px,1fr))]">
         {menuCards.map((card) => {
           return (
             <button
               key={card.id}
               onClick={() => onSetView(card.id)}
-              className="group relative flex flex-col items-center justify-center p-4 sm:p-6 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-2xl sm:rounded-3xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer text-center min-h-[130px] sm:min-h-[160px] select-none"
+              className="group relative flex min-h-[145px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-center shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-violet-400/60 hover:bg-white hover:shadow-xl hover:shadow-violet-900/10 sm:min-h-[165px] sm:p-6"
             >
               {/* Badge indicator if any */}
               {card.badge && (
-                <span className={`absolute top-2 right-2 sm:top-3 sm:right-3 text-[8px] sm:text-[9px] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap ${card.badgeColor}`}>
+                  <span className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[8px] font-extrabold whitespace-nowrap sm:right-3 sm:top-3 sm:text-[9px] ${card.badgeColor}`}>
                   {card.badge}
                 </span>
               )}
 
               {/* Large styled icon (real workshop artwork) */}
-              <div className="p-3 sm:p-4 bg-slate-50 group-hover:bg-violet-50 group-hover:scale-105 rounded-2xl border border-slate-100 transition-all duration-300">
-                <img src={card.img} alt={card.label} className="w-7 h-7 sm:w-8 sm:h-8 object-contain" />
+              <div className="rounded-2xl border border-[#3b315e] bg-[#180c34] p-3 shadow-inner shadow-black/20 transition-all duration-300 group-hover:scale-105 group-hover:border-violet-300 group-hover:bg-[#24144d] sm:p-4">
+                <img src={card.img} alt={card.label} className="menu-dashboard-icon h-7 w-7 object-contain sm:h-8 sm:w-8" />
               </div>
 
               {/* Label */}
-              <span className="mt-3 sm:mt-4 text-xs sm:text-sm font-black text-slate-900 group-hover:text-violet-600 transition-colors uppercase tracking-wide">
+              <span className="mt-3 text-xs font-black uppercase tracking-wide text-slate-200 transition-colors group-hover:text-violet-700 sm:mt-4 sm:text-sm">
                 {card.label}
               </span>
 
               {/* Description */}
-              <span className="mt-1 text-[9px] sm:text-[10px] text-slate-400 font-semibold truncate max-w-full">
+              <span className="mt-1 max-w-full truncate text-[9px] font-semibold text-slate-500 group-hover:text-slate-600 sm:text-[10px]">
                 {card.description}
               </span>
+              <ArrowUpRight className="absolute bottom-3 right-3 h-3.5 w-3.5 text-slate-700 opacity-0 transition-opacity group-hover:opacity-100" />
             </button>
           );
         })}

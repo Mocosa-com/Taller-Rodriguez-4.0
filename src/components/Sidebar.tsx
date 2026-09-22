@@ -10,7 +10,6 @@ import {
   Truck, 
   Briefcase, 
   Settings, 
-  Home,
   Clock,
   Landmark,
   LogOut,
@@ -73,7 +72,6 @@ export function Sidebar({
     {
       title: 'Principal',
       items: [
-        { id: 'home', label: 'Menú Principal', icon: Home, img: null },
         { id: 'reportes', label: 'Reportes & Estadísticas', icon: BarChart3, img: '/assets/sidebar/reportes.png' },
       ]
     },
@@ -150,19 +148,19 @@ export function Sidebar({
                       onSetView(item.id);
                       onCloseMobile?.();
                     }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-205 group relative ${
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-205 group relative ${
                       isActive
                         ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/20'
                         : 'text-slate-300 hover:bg-slate-850/60 hover:text-white'
                     }`}
                   >
-                    <div className={`p-1 rounded-lg transition-colors ${
+                    <div className={`p-1.5 rounded-lg transition-colors ${
                       isActive ? 'bg-white/10 text-white' : 'bg-slate-850/40 text-slate-400 group-hover:text-white'
                     }`}>
                       {item.img ? (
-                        <img src={item.img} alt="" className="w-3.5 h-3.5 object-contain" />
+                        <img src={item.img} alt="" className="w-5 h-5 object-contain" />
                       ) : (
-                        <IconComponent className="w-3.5 h-3.5" />
+                        <IconComponent className="w-4 h-4" />
                       )}
                     </div>
                     <span className="flex-1 text-left truncate">{item.label}</span>

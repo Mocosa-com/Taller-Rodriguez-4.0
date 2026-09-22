@@ -147,3 +147,36 @@ input::placeholder, textarea::placeholder {
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+body {
+  background: #f4f3f6;
+}
+
+.menu-dashboard-icon {
+  filter: brightness(0) invert(1);
+  opacity: 0.96;
+}
+
+#app-wrapper {
+  background-color: #f4f3f6;
+  background-image:
+    linear-gradient(rgba(73, 66, 104, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(73, 66, 104, 0.035) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+#app-wrapper main {
+  position: relative;
+}
+
+#app-wrapper main::before {
+  position: absolute;
+  inset: 1rem 1rem auto auto;
+  width: 10rem;
+  height: 10rem;
+  border-radius: 9999px;
+  background: rgba(14, 165, 233, 0.07);
+  filter: blur(48px);
+  content: '';
+  pointer-events: none;
+}

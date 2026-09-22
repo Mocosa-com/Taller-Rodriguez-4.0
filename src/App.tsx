@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Sidebar, ActiveView } from './components/Sidebar';
-import { Dashboard } from './components/Dashboard';
-import { Vehiculos } from './components/Vehiculos';
-import { Caja } from './components/Caja';
-import { Clientes } from './components/Clientes';
-import { Facturacion } from './components/Facturacion';
-import { Inventario } from './components/Inventario';
-import { Offers } from './components/Offers';
-import { Proveedores } from './components/Proveedores';
-import { Empleados } from './components/Empleados';
-import { PerfilEditar } from './components/PerfilEditar';
-import { MenuDashboard } from './components/MenuDashboard';
+import {
+  Sidebar,
+  type ActiveView,
+  Dashboard,
+  Vehiculos,
+  Caja,
+  Clientes,
+  Facturacion,
+  Inventario,
+  Offers,
+  Proveedores,
+  Empleados,
+  PerfilEditar,
+  MenuDashboard
+} from './views';
 
 import { 
   Usuario, 
@@ -25,6 +28,7 @@ import {
   RegistroSueldo 
 } from './types';
 import { LocalDataBase } from './mockData';
+import { useAuthController } from './controllers/useAuthController';
 import { 
   KeyRound, 
   AlertTriangle, 
@@ -33,10 +37,6 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  // Authentication & session
-  const [isLogged, setIsLogged] = useState<boolean>(() => LocalDataBase.isLogged());
-  const [currentUser, setCurrentUser] = useState<Usuario>(() => LocalDataBase.getCurrentUser());
-
   // Navigation pages (matches Sidebar ActiveView): home, vehiculos, caja, clientes, ofertas, facturacion, inventario, proveedores, empleados
   const [currentPage, setCurrentPage] = useState<ActiveView>('home');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
@@ -55,20 +55,22 @@ export default function App() {
   const [turnosHistory, setTurnosHistory] = useState<TurnoCaja[]>(() => LocalDataBase.getHistorialTurnos());
   const [activeTurno, setActiveTurno] = useState<TurnoCaja | null>(() => LocalDataBase.getActiveTurno());
 
-  // Login variables
-  const [loginUserDui, setLoginUserDui] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
+  const {
+    isLogged,
+    currentUser,
+    loginUserDui,
+    loginPassword,
+    loginError,
+    setLoginUserDui,
+    setLoginPassword,
+    handleLogin,
+    handleQuickLogin,
+    handleLogout,
+    handleSwitchUserRole,
+    updateCurrentUser
+  } = useAuthController(empleados);
 
   // Synchronize root LocalStorage when state mutates
-  useEffect(() => {
-    LocalDataBase.saveLogged(isLogged);
-  }, [isLogged]);
-
-  useEffect(() => {
-    LocalDataBase.saveCurrentUser(currentUser);
-  }, [currentUser]);
-
   useEffect(() => {
     LocalDataBase.saveEmpleados(empleados);
   }, [empleados]);
@@ -108,44 +110,6 @@ export default function App() {
   useEffect(() => {
     LocalDataBase.saveActiveTurno(activeTurno);
   }, [activeTurno]);
-
-  // Login execution
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    const found = empleados.find(emp => 
-      emp.dui.replace(/\D/g, '') === loginUserDui.replace(/\D/g, '') || 
-      emp.nombre.toLowerCase() === loginUserDui.trim().toLowerCase()
-    );
-
-    if (found) {
-      if (found.password === loginPassword || loginPassword === '123') {
-        setCurrentUser(found);
-        setIsLogged(true);
-        setLoginError('');
-      } else {
-        setLoginError('Contraseña incorrecta. (Pruebe con "123").');
-      }
-    } else {
-      setLoginError('DUI o nombre de empleado no identificado.');
-    }
-  };
-
-  // Quick access login bypass
-  const handleQuickLogin = (emp: Usuario) => {
-    setCurrentUser(emp);
-    setIsLogged(true);
-    setLoginError('');
-  };
-
-  const handleLogout = () => {
-    setIsLogged(false);
-  };
-
-  // Switch Role picker
-  const handleSwitchUserRole = (newUser: Usuario) => {
-    setCurrentUser(newUser);
-    alert(`Sincronizado perfil de sesión: Se cambió a rol de [${newUser.cargo}] con éxito.`);
-  };
 
   // Callback mutators:
   
@@ -377,7 +341,7 @@ export default function App() {
   const handleUpdateUsuario = (user: Usuario) => {
     setEmpleados(prev => prev.map(e => e.id === user.id ? user : e));
     if (user.id === currentUser.id) {
-      setCurrentUser(user);
+      updateCurrentUser(user);
     }
   };
 
