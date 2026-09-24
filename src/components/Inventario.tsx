@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Producto, Proveedor } from '../types';
 import { 
   Package, 
@@ -20,7 +20,7 @@ import {
 interface InventarioProps {
   productos: Producto[];
   proveedores: Proveedor[];
-  onAddProducto: (p: Omit<Producto, 'id' | 'sku'>) => void;
+  onAddProducto: (p: Omit<Producto, 'id'>) => void | Promise<void>;
   onUpdateProducto: (p: Producto) => void;
   onDeleteProducto: (id: string) => void;
   onAdjustStock: (id: string, qty: number) => void;
@@ -53,6 +53,9 @@ export function Inventario({
   const [isStockInOpen, setIsStockInOpen] = useState(false);
   const [isStockOutOpen, setIsStockOutOpen] = useState(false);
   const [selectedProd, setSelectedProd] = useState<Producto | null>(null);
+  const [formError, setFormError] = useState('');
+  const [importMessage, setImportMessage] = useState('');
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
   // Form entries
   const [formData, setFormData] = useState({
@@ -115,6 +118,7 @@ export function Inventario({
       stockMaximum: 999,
       descripcion: ''
     });
+    setFormError('');
     setIsAddOpen(true);
   };
 
@@ -133,7 +137,28 @@ export function Inventario({
       stockMaximum: p.stockMaximo || 999,
       descripcion: p.descripcion
     });
+    setFormError('');
     setIsEditOpen(true);
+  };
+
+  const nextSku = () => {
+    const highest = productos.reduce((max, product) => {
+      const match = product.sku.match(/(\d+)$/);
+      return match ? Math.max(max, Number(match[1])) : max;
+    }, 0);
+    return `SKU-${String(highest + 1).padStart(4, '0')}`;
+  };
+
+  const validateProduct = () => {
+    const name = formData.nombre.trim();
+    if (!name) return 'El nombre del producto es obligatorio.';
+    if (!formData.proveedor.trim()) return 'Seleccione un proveedor.';
+    if (!formData.clasificacion.trim()) return 'Seleccione una clasificación.';
+    if (!Number.isFinite(formData.compra) || formData.compra < 0) return 'El precio de compra debe ser válido y no negativo.';
+    if (!Number.isFinite(formData.venta) || formData.venta < 0) return 'El precio de venta debe ser válido y no negativo.';
+    if (formData.tipo === 'Producto' && (!Number.isInteger(formData.stock) || formData.stock < 0)) return 'El stock debe ser un número entero no negativo.';
+    if (formData.tipo === 'Producto' && (!Number.isInteger(formData.stockMinimo) || formData.stockMinimo < 0)) return 'El stock mínimo debe ser un número entero no negativo.';
+    return '';
   };
 
   const handleOpenStockIn = (p: Producto) => {
@@ -152,14 +177,31 @@ export function Inventario({
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.nombre) return;
-    onAddProducto({ ...formData, stockMaximo: formData.stockMaximum });
+    const error = validateProduct();
+    if (error) {
+      setFormError(error);
+      return;
+    }
+    const sku = formData.sku.trim() || nextSku();
+    const duplicate = productos.find(product => product.sku.toLowerCase() === sku.toLowerCase() || (product.nombre.trim().toLowerCase() === formData.nombre.trim().toLowerCase() && product.tipo === formData.tipo));
+    if (duplicate) {
+      if (formData.tipo === 'Producto' && formData.stock > 0) onAdjustStock(duplicate.id, formData.stock);
+      setFormError(`El artículo ya existe (${duplicate.sku}). Se sumó su stock en lugar de duplicarlo.`);
+      setTimeout(() => setIsAddOpen(false), 900);
+      return;
+    }
+    onAddProducto({ ...formData, sku, stockMaximo: formData.stockMaximum });
     setIsAddOpen(false);
   };
 
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProd) return;
+    const error = validateProduct();
+    if (error || !formData.sku.trim()) {
+      setFormError(error || 'El código SKU es obligatorio.');
+      return;
+    }
     onUpdateProducto({
       ...selectedProd,
       sku: formData.sku,
@@ -175,6 +217,71 @@ export function Inventario({
       descripcion: formData.descripcion
     });
     setIsEditOpen(false);
+  };
+
+  const parseCsvLine = (line: string) => {
+    const values: string[] = [];
+    let value = '';
+    let quoted = false;
+    for (let index = 0; index < line.length; index += 1) {
+      const char = line[index];
+      if (char === '"' && line[index + 1] === '"') { value += '"'; index += 1; }
+      else if (char === '"') quoted = !quoted;
+      else if (char === ',' && !quoted) { values.push(value.trim()); value = ''; }
+      else value += char;
+    }
+    values.push(value.trim());
+    return values;
+  };
+
+  const handleImportCsv = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    const lines = (await file.text()).split(/\r?\n/).filter(line => line.trim());
+    if (lines.length < 2) { setImportMessage('El CSV debe tener encabezados y al menos un artículo.'); return; }
+    const headers = parseCsvLine(lines[0]).map(header => header.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim());
+    const valueOf = (row: string[], names: string[]) => row[headers.findIndex(header => names.includes(header))] || '';
+    const pending = new Map<string, { product: Omit<Producto, 'id'>; stock: number }>();
+    let generatedSkuNumber = productos.reduce((max, product) => {
+      const match = product.sku.match(/(\d+)$/);
+      return match ? Math.max(max, Number(match[1])) : max;
+    }, 0);
+    let rejected = 0;
+    lines.slice(1).forEach(line => {
+      const row = parseCsvLine(line);
+      const nombre = valueOf(row, ['nombre', 'name', 'producto']).trim();
+      if (!nombre) { rejected += 1; return; }
+      const tipo = valueOf(row, ['tipo', 'type']).toLowerCase() === 'servicio' ? 'Servicio' : 'Producto';
+      const stock = Number(valueOf(row, ['stock', 'cantidad', 'quantity']) || 0);
+      const compra = Number(valueOf(row, ['compra', 'preciocompra', 'purchaseprice']) || 0);
+      const venta = Number(valueOf(row, ['venta', 'precioventa', 'saleprice']) || 0);
+      const proveedor = valueOf(row, ['proveedor', 'supplier']).trim();
+      const clasificacion = valueOf(row, ['clasificacion', 'classification', 'categoria']).trim();
+      if (!Number.isFinite(stock) || stock < 0 || !Number.isFinite(compra) || compra < 0 || !Number.isFinite(venta) || venta < 0 || !proveedor || !clasificacion) { rejected += 1; return; }
+      const skuValue = valueOf(row, ['sku', 'codigo', 'codigo sku']).trim();
+      const sku = skuValue || `SKU-${String(++generatedSkuNumber).padStart(4, '0')}`;
+      const key = `${sku.toLowerCase()}|${nombre.toLowerCase()}|${tipo}`;
+      const existing = pending.get(key);
+      if (existing) existing.stock += stock;
+      else pending.set(key, { stock, product: { sku, nombre, tipo, stock, compra, venta, proveedor, clasificacion, stockMinimo: Number(valueOf(row, ['stockminimo', 'minimo']) || 0), stockMaximo: Number(valueOf(row, ['stockmaximo', 'maximo']) || 999), descripcion: valueOf(row, ['descripcion', 'description']).trim() } });
+    });
+    let added = 0;
+    let merged = 0;
+    for (const { product, stock } of pending.values()) {
+      const existing = productos.find(item => item.sku.toLowerCase() === product.sku.toLowerCase() || (item.nombre.trim().toLowerCase() === product.nombre.trim().toLowerCase() && item.tipo === product.tipo));
+      if (existing) { if (product.tipo === 'Producto' && stock > 0) { onAdjustStock(existing.id, stock); merged += 1; } }
+      else { await onAddProducto({ ...product, stock }); added += 1; }
+    }
+    setImportMessage(`Importación completa: ${added} nuevos, ${merged} acumulados y ${rejected} rechazados.`);
+  };
+
+  const handleExportCsv = () => {
+    const columns = ['sku', 'nombre', 'tipo', 'stock', 'compra', 'venta', 'proveedor', 'clasificacion', 'stockMinimo', 'stockMaximo', 'descripcion'];
+    const escape = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const csv = [columns.join(','), ...productos.map(product => columns.map(column => escape(product[column as keyof Producto])).join(','))].join('\r\n');
+    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' }));
+    const link = document.createElement('a'); link.href = url; link.download = `inventario-${new Date().toISOString().slice(0, 10)}.csv`; link.click(); URL.revokeObjectURL(url);
   };
 
   const handleStockAdjustIn = (e: React.FormEvent) => {
@@ -218,15 +325,16 @@ export function Inventario({
 
           <div className="flex gap-2.5 flex-wrap">
             <button
-              onClick={() => alert('Simulación: Importando catálogo CSV...')}
+              onClick={() => csvInputRef.current?.click()}
               className="flex items-center gap-1.5 text-xs font-bold text-slate-350 bg-slate-850 hover:bg-slate-800 border border-slate-805 rounded-xl px-3.5 py-2.5 cursor-pointer transition-all"
             >
               <Upload className="w-4 h-4 text-slate-500" />
               <span>Importar CSV</span>
             </button>
+            <input ref={csvInputRef} type="file" accept=".csv,text/csv" onChange={handleImportCsv} className="hidden" />
             
             <button
-              onClick={() => alert('Generando listado de exportación en formato XLSX...')}
+              onClick={handleExportCsv}
               className="flex items-center gap-1.5 text-xs font-bold text-slate-350 bg-slate-850 hover:bg-slate-800 border border-slate-805 rounded-xl px-3.5 py-2.5 cursor-pointer transition-all"
             >
               <Download className="w-4 h-4 text-slate-500" />
@@ -243,6 +351,13 @@ export function Inventario({
             </button>
           </div>
         </div>
+
+        {importMessage && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-800" role="status">
+            {importMessage}
+            <button type="button" className="ml-3 font-black underline" onClick={() => setImportMessage('')}>Cerrar</button>
+          </div>
+        )}
 
         {/* Row 2: Categories Filters (Seamless layout, no separate card box) */}
         <div className="flex items-center gap-2 flex-wrap py-1.5 overflow-x-auto border-b border-slate-850/30 pb-4">
@@ -548,6 +663,7 @@ export function Inventario({
             </div>
 
             <form onSubmit={handleAddSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              {formError && <div className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700" role="alert">{formError}</div>}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">Nombre del producto *</label>
                 <input
@@ -699,6 +815,7 @@ export function Inventario({
             </div>
 
             <form onSubmit={handleEditSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              {formError && <div className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700" role="alert">{formError}</div>}
               
               <div className="grid grid-cols-3 gap-2">
                 <div className="col-span-2">

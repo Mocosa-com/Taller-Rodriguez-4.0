@@ -28,6 +28,7 @@ import {
   RegistroSueldo 
 } from './types';
 import { api } from './api';
+import { LocalDataBase } from './mockData';
 import { useAuthController } from './controllers/useAuthController';
 import { 
   KeyRound, 
@@ -40,23 +41,25 @@ export default function App() {
   // Navigation pages (matches Sidebar ActiveView): home, vehiculos, caja, clientes, ofertas, facturacion, inventario, proveedores, empleados
   const [currentPage, setCurrentPage] = useState<ActiveView>('home');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [useLocalData, setUseLocalData] = useState(true);
 
   // Master Collections
-  const [empleados, setEmpleados] = useState<Usuario[]>([]);
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
-  const [ofertas, setOfertas] = useState<Oferta[]>([]);
-  const [facturas, setFacturas] = useState<Factura[]>([]);
-  const [reportes, setReportes] = useState<ReporteTrabajador[]>([]);
+  const [empleados, setEmpleados] = useState<Usuario[]>(() => LocalDataBase.getEmpleados());
+  const [clientes, setClientes] = useState<Cliente[]>(() => LocalDataBase.getClientes());
+  const [vehiculos, setVehiculos] = useState<Vehiculo[]>(() => LocalDataBase.getVehiculos());
+  const [productos, setProductos] = useState<Producto[]>(() => LocalDataBase.getProductos());
+  const [proveedores, setProveedores] = useState<Proveedor[]>(() => LocalDataBase.getProveedores());
+  const [ofertas, setOfertas] = useState<Oferta[]>(() => LocalDataBase.getOfertas());
+  const [facturas, setFacturas] = useState<Factura[]>(() => LocalDataBase.getFacturas());
+  const [reportes, setReportes] = useState<ReporteTrabajador[]>(() => LocalDataBase.getReportesTrabajadores());
   
   // Shift Management State
-  const [turnosHistory, setTurnosHistory] = useState<TurnoCaja[]>([]);
-  const [activeTurno, setActiveTurno] = useState<TurnoCaja | null>(null);
+  const [turnosHistory, setTurnosHistory] = useState<TurnoCaja[]>(() => LocalDataBase.getHistorialTurnos());
+  const [activeTurno, setActiveTurno] = useState<TurnoCaja | null>(() => LocalDataBase.getActiveTurno());
 
   const {
     isLogged,
+    authReady,
     currentUser,
     loginUserDui,
     loginPassword,
@@ -71,21 +74,44 @@ export default function App() {
   } = useAuthController();
 
   useEffect(() => {
-    if (!isLogged) return;
+    if (!useLocalData) return;
+    LocalDataBase.saveEmpleados(empleados);
+    LocalDataBase.saveClientes(clientes);
+    LocalDataBase.saveVehiculos(vehiculos);
+    LocalDataBase.saveProductos(productos);
+    LocalDataBase.saveProveedores(proveedores);
+    LocalDataBase.saveOfertas(ofertas);
+    LocalDataBase.saveFacturas(facturas);
+    LocalDataBase.saveReportesTrabajadores(reportes);
+    LocalDataBase.saveHistorialTurnos(turnosHistory);
+    LocalDataBase.saveActiveTurno(activeTurno);
+  }, [useLocalData, empleados, clientes, vehiculos, productos, proveedores, ofertas, facturas, reportes, turnosHistory, activeTurno]);
+
+  useEffect(() => {
+    if (!isLogged || !authReady) return;
     void Promise.all([api.customers(), api.vehicles(), api.products(), api.invoices(), api.activeShift(), api.shifts()]).then(([loadedClientes, loadedVehiculos, loadedProductos, loadedFacturas, loadedActiveShift, loadedShifts]) => {
       setClientes(loadedClientes); setVehiculos(loadedVehiculos); setProductos(loadedProductos); setFacturas(loadedFacturas); setActiveTurno(loadedActiveShift); setTurnosHistory(loadedShifts);
-    }).catch((error: Error) => alert(`No se pudo cargar el taller: ${error.message}`));
-  }, [isLogged]);
+      setUseLocalData(false);
+    }).catch(() => setUseLocalData(true));
+  }, [isLogged, authReady]);
 
   // Callback mutators:
   
   // A. Vehiculo actions
   const handleAddVehiculo = async (v: Omit<Vehiculo, 'id' | 'trabajosRealizados'>) => {
+    if (useLocalData) {
+      setVehiculos(prev => [{ ...v, id: `veh-${Date.now()}`, trabajosRealizados: [] }, ...prev]);
+      return;
+    }
     const newVeh = await api.createVehicle(v);
     setVehiculos(prev => [newVeh, ...prev]);
   };
 
   const handleUpdateVehiculo = async (updated: Vehiculo) => {
+    if (useLocalData) {
+      setVehiculos(prev => prev.map(vehicle => vehicle.id === updated.id ? updated : vehicle));
+      return;
+    }
     const saved = await api.updateVehicle(updated);
     setVehiculos(prev => prev.map(v => v.id === saved.id ? saved : v));
   };
@@ -96,6 +122,11 @@ export default function App() {
 
   // Rapid addition page 11 integration
   const handleAddClienteRapido = async (c: { nombre: string; telefono: string; dui: string; correo: string }) => {
+    if (useLocalData) {
+      const id = `cli-${Date.now()}`;
+      setClientes(prev => [{ ...c, id, frecuenciaVisita: 'Regular', direccion: 'Filtro rápido taller', activo: true }, ...prev]);
+      return id;
+    }
     const newCli = await api.createCustomer({ ...c, frecuenciaVisita: 'Regular', direccion: '', activo: true });
     setClientes(prev => [newCli, ...prev]);
     return newCli.id;
@@ -103,26 +134,47 @@ export default function App() {
 
   // B. Cliente actions
   const handleAddCliente = async (c: Omit<Cliente, 'id'>) => {
+    if (useLocalData) {
+      setClientes(prev => [{ ...c, id: `cli-${Date.now()}` }, ...prev]);
+      return;
+    }
     const newCli = await api.createCustomer(c);
     setClientes(prev => [newCli, ...prev]);
   };
 
   const handleUpdateCliente = async (updated: Cliente) => {
+    if (useLocalData) {
+      setClientes(prev => prev.map(client => client.id === updated.id ? updated : client));
+      return;
+    }
     const saved = await api.updateCustomer(updated);
     setClientes(prev => prev.map(c => c.id === saved.id ? saved : c));
   };
 
   const handleDeleteCliente = async (id: string) => {
+    if (useLocalData) {
+      setClientes(prev => prev.filter(client => client.id !== id));
+      return;
+    }
     await api.deleteCustomer(id); setClientes(prev => prev.filter(c => c.id !== id));
   };
 
   // C. Caja actions (Shift Open/Close and Cash updates)
   const handleAbrirCaja = async (baseAmount: number) => {
+    if (useLocalData) {
+      setActiveTurno({ id: `turno-${Date.now()}`, turnoNumero: turnosHistory.length + 1, fecha: new Date().toISOString().split('T')[0], responsableId: currentUser.id, responsableNombre: currentUser.nombre, base: baseAmount, efectivo: baseAmount, horaInicio: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), estado: 'Abierta', facturasEmitidasCount: 0, ventasTurno: 0 });
+      return;
+    }
     setActiveTurno(await api.openShift(baseAmount));
   };
 
   const handleCerrarCaja = async () => {
     if (!activeTurno) return;
+    if (useLocalData) {
+      setTurnosHistory(prev => [{ ...activeTurno, estado: 'Cerrada', cierre: activeTurno.efectivo, horaCierre: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }, ...prev]);
+      setActiveTurno(null);
+      return;
+    }
     const closed = await api.closeShift(activeTurno.id, activeTurno.efectivo);
     setTurnosHistory(prev => [closed, ...prev]); setActiveTurno(null);
   };
@@ -153,22 +205,38 @@ export default function App() {
   };
 
   // E. Producto actions
-  const handleAddProducto = async (p: Omit<Producto, 'id' | 'sku'>) => {
+  const handleAddProducto = async (p: Omit<Producto, 'id'>) => {
+    if (useLocalData) {
+      setProductos(prev => [{ ...p, id: `prod-${Date.now()}` }, ...prev]);
+      return;
+    }
     const newP = await api.createProduct(p);
     setProductos(prev => [newP, ...prev]);
   };
 
   const handleUpdateProducto = async (updated: Producto) => {
+    if (useLocalData) {
+      setProductos(prev => prev.map(product => product.id === updated.id ? updated : product));
+      return;
+    }
     const saved = await api.updateProduct(updated);
     setProductos(prev => prev.map(p => p.id === saved.id ? saved : p));
   };
 
   const handleDeleteProducto = async (id: string) => {
+    if (useLocalData) {
+      setProductos(prev => prev.filter(product => product.id !== id));
+      return;
+    }
     await api.deleteProduct(id);
     setProductos(prev => prev.filter(p => p.id !== id));
   };
 
   const handleAdjustStock = async (prodId: string, qty: number) => {
+    if (useLocalData) {
+      setProductos(prev => prev.map(product => product.id === prodId ? { ...product, stock: Math.max(0, product.stock + qty) } : product));
+      return;
+    }
     const saved = await api.adjustStock(prodId, qty, 'Ajuste manual desde inventario');
     setProductos(prev => prev.map(product => product.id === saved.id ? saved : product));
   };

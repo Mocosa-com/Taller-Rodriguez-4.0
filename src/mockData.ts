@@ -512,11 +512,16 @@ export const INITIAL_REPORTES_TRABAJADORES: ReporteTrabajador[] = [
 // Database state driver (frontend-only, no persistence)
 export class LocalDataBase {
   static get<T>(key: string, initial: T): T {
-    return initial;
+    try {
+      const stored = localStorage.getItem(`taller_${key}`);
+      return stored ? JSON.parse(stored) as T : initial;
+    } catch {
+      return initial;
+    }
   }
 
   static set<T>(key: string, val: T): void {
-    // no-op: frontend only, nothing is persisted
+    localStorage.setItem(`taller_${key}`, JSON.stringify(val));
   }
 
   static getEmpleados(): Usuario[] {

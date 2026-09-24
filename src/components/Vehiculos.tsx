@@ -20,6 +20,7 @@ import {
   PlusCircle,
   FileSpreadsheet
 } from 'lucide-react';
+import { useMarcasController } from '../controllers/useMarcasController';
 
 interface VehiculosProps {
   vehiculos: Vehiculo[];
@@ -51,6 +52,7 @@ export function Vehiculos({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedVehiculo, setSelectedVehiculo] = useState<Vehiculo | null>(null);
+  const [vehicleToDeliver, setVehicleToDeliver] = useState<Vehiculo | null>(null);
 
   // Form states for Add/Edit
   const [formData, setFormData] = useState({
@@ -68,6 +70,26 @@ export function Vehiculos({
     tarjetaUrlFront: 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?auto=format&fit=crop&q=80&w=400',
     tarjetaUrlBack: 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?auto=format&fit=crop&q=80&w=400'
   });
+
+  // Catálogo de marcas (API NHTSA vPIC + respaldo local) y validación
+  const { marcas: catalogoMarcas, estado: estadoMarcas, fuente: fuenteMarcas, validar: validarMarca } = useMarcasController();
+  const [marcaError, setMarcaError] = useState<{ mensaje: string; sugerencias: string[] } | null>(null);
+  const [marcaDropdownOpen, setMarcaDropdownOpen] = useState(false);
+  const marcasFiltradas = catalogoMarcas
+    .filter(marca => marca.toLowerCase().includes(formData.marca.trim().toLowerCase()))
+    .slice(0, 8);
+
+  // Valida la marca escrita; si es válida la normaliza (ej. "toyota" -> "Toyota")
+  const validarCampoMarca = (valor: string): boolean => {
+    const res = validarMarca(valor);
+    if (res.valida && res.marcaCanonica) {
+      setFormData(prev => ({ ...prev, marca: res.marcaCanonica! }));
+      setMarcaError(null);
+      return true;
+    }
+    setMarcaError({ mensaje: res.mensaje || 'Marca no reconocida.', sugerencias: res.sugerencias });
+    return false;
+  };
 
   // Client quick creation modal inside Add modal
   const [showQuickClient, setShowQuickClient] = useState(false);
@@ -130,6 +152,7 @@ export function Vehiculos({
       tarjetaUrlFront: 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?auto=format&fit=crop&q=80&w=400',
       tarjetaUrlBack: 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?auto=format&fit=crop&q=80&w=400'
     });
+    setMarcaError(null);
     setIsAddModalOpen(true);
   };
 
@@ -184,6 +207,13 @@ export function Vehiculos({
       return;
     }
 
+    // Validación de la marca contra el catálogo (NHTSA + lista local)
+    const resMarca = validarMarca(formData.marca);
+    if (!resMarca.valida || !resMarca.marcaCanonica) {
+      setMarcaError({ mensaje: resMarca.mensaje || 'Marca no reconocida.', sugerencias: resMarca.sugerencias });
+      return;
+    }
+
     // Constraints checklist check:
     if (formData.año < minYear || formData.año > currentYear) {
       alert(`Año del vehículo debe estar entre ${minYear} y ${currentYear}.`);
@@ -198,6 +228,7 @@ export function Vehiculos({
 
     onAddVehiculo({
       ...formData,
+      marca: resMarca.marcaCanonica,
       placa: formData.placa || 'Pendiente'
     });
 
@@ -257,14 +288,17 @@ export function Vehiculos({
 
   // Change state to "Entregado" (moving it to History, instead of delete)
   const handleDeliverVehicleNow = (veh: Vehiculo) => {
-    const confirmation = window.confirm(`¿Confirmar entrega del vehículo ${veh.marca} ${veh.modelo} [${veh.placa}]? Se archivará en el historial de entregados.`);
-    if (confirmation) {
-      onUpdateVehiculo({
-        ...veh,
-        estado: 'Entregado',
-        fechaSalida: new Date().toISOString().split('T')[0]
-      });
-    }
+    setVehicleToDeliver(veh);
+  };
+
+  const confirmVehicleDelivery = () => {
+    if (!vehicleToDeliver) return;
+    onUpdateVehiculo({
+      ...vehicleToDeliver,
+      estado: 'Entregado',
+      fechaSalida: new Date().toISOString().split('T')[0]
+    });
+    setVehicleToDeliver(null);
   };
 
   return (
@@ -335,7 +369,7 @@ export function Vehiculos({
           <button
             id="btn-open-add-vehiculo"
             onClick={handleOpenAddModal}
-            className="flex items-center gap-1.5 text-xs font-black text-white bg-gradient-to-r from-orange-500 to-red-555 hover:brightness-105 px-4 py-2.5 rounded-xl shadow-lg shadow-orange-505/15 cursor-pointer uppercase tracking-wider"
+            className="flex items-center gap-1.5 text-xs font-black text-white bg-orange-500 hover:bg-orange-600 px-4 py-2.5 rounded-xl shadow-lg shadow-orange-500/15 cursor-pointer uppercase tracking-wider"
           >
             <Plus className="w-4 h-4" />
             <span>Agregar vehículo</span>
@@ -617,14 +651,77 @@ export function Vehiculos({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">Marca del vehículo *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.marca}
-                    onChange={(e) => setFormData(prev => ({ ...prev, marca: e.target.value }))}
-                    placeholder="Ej. Honda"
-                    className="w-full text-xs bg-slate-950 border border-slate-800 text-white rounded-xl p-2.5 outline-none font-medium text-slate-100"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      autoComplete="off"
+                      value={formData.marca}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, marca: e.target.value }));
+                        setMarcaDropdownOpen(true);
+                        if (marcaError) setMarcaError(null);
+                      }}
+                      onFocus={() => setMarcaDropdownOpen(true)}
+                      onBlur={(e) => {
+                        if (e.target.value.trim()) validarCampoMarca(e.target.value);
+                        window.setTimeout(() => setMarcaDropdownOpen(false), 120);
+                      }}
+                      placeholder="Ej. Honda"
+                      aria-invalid={!!marcaError}
+                      aria-autocomplete="list"
+                      className={`w-full text-xs bg-slate-950 border text-white rounded-xl p-2.5 outline-none font-medium text-slate-100 ${marcaError ? 'border-red-500' : 'border-slate-800'}`}
+                    />
+                    {marcaDropdownOpen && marcasFiltradas.length > 0 && (
+                      <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl">
+                        {marcasFiltradas.map(marca => (
+                          <button
+                            key={marca}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setFormData(prev => ({ ...prev, marca }));
+                              setMarcaError(null);
+                              setMarcaDropdownOpen(false);
+                            }}
+                            className="block w-full rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-violet-50 hover:text-violet-700"
+                          >
+                            {marca}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {marcaError ? (
+                    <div className="mt-1.5 text-[10px] text-red-400 font-medium leading-snug">
+                      <p>{marcaError.mensaje}</p>
+                      {marcaError.sugerencias.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {marcaError.sugerencias.map(sug => (
+                            <button
+                              key={sug}
+                              type="button"
+                              onClick={() => {
+                                setFormData(prev => ({ ...prev, marca: sug }));
+                                setMarcaError(null);
+                              }}
+                              className="px-2 py-0.5 rounded-lg bg-violet-500/20 text-violet-300 border border-violet-500/40 hover:bg-violet-500/30 font-bold cursor-pointer"
+                            >
+                              {sug}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-1.5 text-[10px] text-slate-500">
+                      {estadoMarcas === 'cargando'
+                        ? 'Cargando catálogo de marcas…'
+                        : fuenteMarcas === 'local'
+                          ? 'Sin conexión al catálogo en línea: usando lista local.'
+                          : 'Validada con el catálogo NHTSA.'}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">Modelo del vehículo *</label>
@@ -1176,6 +1273,31 @@ export function Vehiculos({
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {vehicleToDeliver && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+          <div role="dialog" aria-modal="true" aria-labelledby="delivery-dialog-title" className="w-full max-w-md overflow-hidden rounded-2xl border border-orange-200 bg-white shadow-2xl">
+            <div className="flex items-start gap-3 border-b border-orange-100 bg-orange-50 p-5">
+              <div className="rounded-full bg-orange-100 p-2 text-orange-600"><AlertCircle className="h-5 w-5" /></div>
+              <div>
+                <h3 id="delivery-dialog-title" className="text-base font-black text-slate-900">Confirmar entrega</h3>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600">El vehículo pasará al historial de entregados y dejará de aparecer entre los vehículos activos.</p>
+              </div>
+              <button type="button" aria-label="Cerrar" onClick={() => setVehicleToDeliver(null)} className="ml-auto rounded-lg p-1 text-slate-400 hover:bg-orange-100 hover:text-slate-700"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="p-5">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-sm font-black text-slate-900">{vehicleToDeliver.marca} {vehicleToDeliver.modelo}</p>
+                <p className="mt-1 font-mono text-xs font-bold text-orange-600">{vehicleToDeliver.placa}</p>
+              </div>
+              <div className="mt-5 flex justify-end gap-2">
+                <button type="button" onClick={() => setVehicleToDeliver(null)} className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50">Cancelar</button>
+                <button type="button" onClick={confirmVehicleDelivery} className="rounded-xl bg-orange-600 px-4 py-2.5 text-xs font-black text-white hover:bg-orange-700">Confirmar entrega</button>
+              </div>
+            </div>
           </div>
         </div>
       )}

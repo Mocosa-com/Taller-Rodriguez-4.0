@@ -122,6 +122,26 @@ button .text-white,
   --color-text-white: #ffffff;
 }
 
+/* Keep action buttons solid while preserving gradients on decorative panels. */
+button[class*="bg-gradient-"] {
+  background-image: none !important;
+}
+button[class*="from-"] {
+  background-image: none !important;
+}
+button[class*="from-violet-"] {
+  background-color: #180c34 !important;
+}
+button[class*="from-orange-"] {
+  background-color: #f97316 !important;
+}
+button[class*="from-emerald-"] {
+  background-color: #059669 !important;
+}
+button[class*="from-red-"] {
+  background-color: #dc2626 !important;
+}
+
 #role-quick-switcher, #month-filter-dropdown {
   background-color: #ffffff !important;
   color: #180c34 !important;
