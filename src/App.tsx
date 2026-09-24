@@ -27,7 +27,7 @@ import {
   ReporteTrabajador, 
   RegistroSueldo 
 } from './types';
-import { LocalDataBase } from './mockData';
+import { api } from './api';
 import { useAuthController } from './controllers/useAuthController';
 import { 
   KeyRound, 
@@ -42,18 +42,18 @@ export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
 
   // Master Collections
-  const [empleados, setEmpleados] = useState<Usuario[]>(() => LocalDataBase.getEmpleados());
-  const [clientes, setClientes] = useState<Cliente[]>(() => LocalDataBase.getClientes());
-  const [vehiculos, setVehiculos] = useState<Vehiculo[]>(() => LocalDataBase.getVehiculos());
-  const [productos, setProductos] = useState<Producto[]>(() => LocalDataBase.getProductos());
-  const [proveedores, setProveedores] = useState<Proveedor[]>(() => LocalDataBase.getProveedores());
-  const [ofertas, setOfertas] = useState<Oferta[]>(() => LocalDataBase.getOfertas());
-  const [facturas, setFacturas] = useState<Factura[]>(() => LocalDataBase.getFacturas());
-  const [reportes, setReportes] = useState<ReporteTrabajador[]>(() => LocalDataBase.getReportesTrabajadores());
+  const [empleados, setEmpleados] = useState<Usuario[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+  const [ofertas, setOfertas] = useState<Oferta[]>([]);
+  const [facturas, setFacturas] = useState<Factura[]>([]);
+  const [reportes, setReportes] = useState<ReporteTrabajador[]>([]);
   
   // Shift Management State
-  const [turnosHistory, setTurnosHistory] = useState<TurnoCaja[]>(() => LocalDataBase.getHistorialTurnos());
-  const [activeTurno, setActiveTurno] = useState<TurnoCaja | null>(() => LocalDataBase.getActiveTurno());
+  const [turnosHistory, setTurnosHistory] = useState<TurnoCaja[]>([]);
+  const [activeTurno, setActiveTurno] = useState<TurnoCaja | null>(null);
 
   const {
     isLogged,
@@ -68,63 +68,26 @@ export default function App() {
     handleLogout,
     handleSwitchUserRole,
     updateCurrentUser
-  } = useAuthController(empleados);
-
-  // Synchronize root LocalStorage when state mutates
-  useEffect(() => {
-    LocalDataBase.saveEmpleados(empleados);
-  }, [empleados]);
+  } = useAuthController();
 
   useEffect(() => {
-    LocalDataBase.saveClientes(clientes);
-  }, [clientes]);
-
-  useEffect(() => {
-    LocalDataBase.saveVehiculos(vehiculos);
-  }, [vehiculos]);
-
-  useEffect(() => {
-    LocalDataBase.saveProductos(productos);
-  }, [productos]);
-
-  useEffect(() => {
-    LocalDataBase.saveProveedores(proveedores);
-  }, [proveedores]);
-
-  useEffect(() => {
-    LocalDataBase.saveOfertas(ofertas);
-  }, [ofertas]);
-
-  useEffect(() => {
-    LocalDataBase.saveFacturas(facturas);
-  }, [facturas]);
-
-  useEffect(() => {
-    LocalDataBase.saveReportesTrabajadores(reportes);
-  }, [reportes]);
-
-  useEffect(() => {
-    LocalDataBase.saveHistorialTurnos(turnosHistory);
-  }, [turnosHistory]);
-
-  useEffect(() => {
-    LocalDataBase.saveActiveTurno(activeTurno);
-  }, [activeTurno]);
+    if (!isLogged) return;
+    void Promise.all([api.customers(), api.vehicles(), api.products(), api.invoices(), api.activeShift(), api.shifts()]).then(([loadedClientes, loadedVehiculos, loadedProductos, loadedFacturas, loadedActiveShift, loadedShifts]) => {
+      setClientes(loadedClientes); setVehiculos(loadedVehiculos); setProductos(loadedProductos); setFacturas(loadedFacturas); setActiveTurno(loadedActiveShift); setTurnosHistory(loadedShifts);
+    }).catch((error: Error) => alert(`No se pudo cargar el taller: ${error.message}`));
+  }, [isLogged]);
 
   // Callback mutators:
   
   // A. Vehiculo actions
-  const handleAddVehiculo = (v: Omit<Vehiculo, 'id' | 'trabajosRealizados'>) => {
-    const newVeh: Vehiculo = {
-      ...v,
-      id: `veh-${Date.now()}`,
-      trabajosRealizados: []
-    };
+  const handleAddVehiculo = async (v: Omit<Vehiculo, 'id' | 'trabajosRealizados'>) => {
+    const newVeh = await api.createVehicle(v);
     setVehiculos(prev => [newVeh, ...prev]);
   };
 
-  const handleUpdateVehiculo = (updated: Vehiculo) => {
-    setVehiculos(prev => prev.map(v => v.id === updated.id ? updated : v));
+  const handleUpdateVehiculo = async (updated: Vehiculo) => {
+    const saved = await api.updateVehicle(updated);
+    setVehiculos(prev => prev.map(v => v.id === saved.id ? saved : v));
   };
 
   const handleDeleteVehiculo = (id: string) => {
@@ -132,80 +95,43 @@ export default function App() {
   };
 
   // Rapid addition page 11 integration
-  const handleAddClienteRapido = (c: { nombre: string; telefono: string; dui: string; correo: string }) => {
-    const newId = `cli-${Date.now()}`;
-    const newCli: Cliente = {
-      ...c,
-      id: newId,
-      frecuenciaVisita: 'Regular',
-      direccion: 'Filtro rápido taller',
-      activo: true
-    };
+  const handleAddClienteRapido = async (c: { nombre: string; telefono: string; dui: string; correo: string }) => {
+    const newCli = await api.createCustomer({ ...c, frecuenciaVisita: 'Regular', direccion: '', activo: true });
     setClientes(prev => [newCli, ...prev]);
-    return newId;
+    return newCli.id;
   };
 
   // B. Cliente actions
-  const handleAddCliente = (c: Omit<Cliente, 'id'>) => {
-    const newCli: Cliente = {
-      ...c,
-      id: `cli-${Date.now()}`
-    };
+  const handleAddCliente = async (c: Omit<Cliente, 'id'>) => {
+    const newCli = await api.createCustomer(c);
     setClientes(prev => [newCli, ...prev]);
   };
 
-  const handleUpdateCliente = (updated: Cliente) => {
-    setClientes(prev => prev.map(c => c.id === updated.id ? updated : c));
+  const handleUpdateCliente = async (updated: Cliente) => {
+    const saved = await api.updateCustomer(updated);
+    setClientes(prev => prev.map(c => c.id === saved.id ? saved : c));
   };
 
-  const handleDeleteCliente = (id: string) => {
-    setClientes(prev => prev.filter(c => c.id !== id));
+  const handleDeleteCliente = async (id: string) => {
+    await api.deleteCustomer(id); setClientes(prev => prev.filter(c => c.id !== id));
   };
 
   // C. Caja actions (Shift Open/Close and Cash updates)
-  const handleAbrirCaja = (baseAmount: number) => {
-    const nextTurno: TurnoCaja = {
-      id: `turno-${Date.now()}`,
-      turnoNumero: turnosHistory.length + 1,
-      fecha: new Date().toISOString().split('T')[0],
-      responsableId: currentUser.id,
-      responsableNombre: currentUser.nombre,
-      base: baseAmount,
-      efectivo: baseAmount,
-      horaInicio: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      estado: 'Abierta',
-      facturasEmitidasCount: 0,
-      ventasTurno: 0
-    };
-    setActiveTurno(nextTurno);
+  const handleAbrirCaja = async (baseAmount: number) => {
+    setActiveTurno(await api.openShift(baseAmount));
   };
 
-  const handleCerrarCaja = () => {
+  const handleCerrarCaja = async () => {
     if (!activeTurno) return;
-    const closed: TurnoCaja = {
-      ...activeTurno,
-      estado: 'Cerrada',
-      horaFin: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-    setTurnosHistory(prev => [closed, ...prev]);
-    setActiveTurno(null);
+    const closed = await api.closeShift(activeTurno.id, activeTurno.efectivo);
+    setTurnosHistory(prev => [closed, ...prev]); setActiveTurno(null);
   };
 
-  const handleAnularFactura = (id: string) => {
-    setFacturas(prev => prev.map(f => {
-      if (f.id === id) {
-        // Reverse shift balance
-        if (activeTurno) {
-          setActiveTurno(t => t ? {
-            ...t,
-            efectivo: Math.max(0, t.efectivo - f.total),
-            ventasTurno: Math.max(0, t.ventasTurno - f.total)
-          } : null);
-        }
-        return { ...f, estado: 'Anulada' as any };
-      }
-      return f;
-    }));
+  const handleAnularFactura = async (id: string) => {
+    const saved = await api.annulInvoice(id, 'Anulación solicitada desde caja');
+    setFacturas(prev => prev.map(invoice => invoice.id === saved.id ? saved : invoice));
+    setActiveTurno(await api.activeShift());
+    setProductos(await api.products());
   };
 
   const handleActualizarEfectivoActual = (monto: number) => {
@@ -218,85 +144,33 @@ export default function App() {
   };
 
   // D. Emit Factura & Deduct Stocks
-  const handleEmitirFactura = (f: Omit<Factura, 'id' | 'codigo' | 'fecha'>) => {
-    const code = `FACT-${Math.floor(20000 + Math.random() * 80000)}`;
-    const newFact: Factura = {
-      ...f,
-      id: `fact-${Date.now()}`,
-      codigo: code,
-      fecha: new Date().toISOString().split('T')[0],
-    };
-
-    // 1. Append invoice list
+  const handleEmitirFactura = async (f: Omit<Factura, 'id' | 'codigo' | 'fecha'>) => {
+    const newFact = await api.createInvoice({ customerId: f.clienteId, vehicleId: f.vehiculoId, type: f.tipo, items: f.items.map(item => ({ productId: item.productoId, quantity: item.cantidad })) });
     setFacturas(prev => [newFact, ...prev]);
-
-    // 2. Adjust active cashier turn cash
-    if (activeTurno) {
-      setActiveTurno(prev => prev ? {
-        ...prev,
-        efectivo: prev.efectivo + f.total,
-        facturasEmitidasCount: prev.facturasEmitidasCount + 1,
-        ventasTurno: prev.ventasTurno + f.total
-      } : null);
-    }
-
-    // 3. Deduct stock for products
-    f.items.forEach(item => {
-      if (item.tipo === 'Producto') {
-        setProductos(prevProds => {
-          return prevProds.map(p => {
-            if (p.id === item.productoId) {
-              const resultingStock = Math.max(0, p.stock - item.cantidad);
-              return { ...p, stock: resultingStock };
-            }
-            return p;
-          });
-        });
-      }
-    });
-
-    // 4. Update the vehicle status to "Entregado"
-    if (f.vehiculoId) {
-      setVehiculos(prevVehs => {
-        return prevVehs.map(v => {
-          if (v.id === f.vehiculoId) {
-            return { ...v, estado: 'Entregado' };
-          }
-          return v;
-        });
-      });
-    }
+    setActiveTurno(await api.activeShift());
+    setProductos(await api.products());
+    setVehiculos(await api.vehicles());
   };
 
   // E. Producto actions
-  const handleAddProducto = (p: Omit<Producto, 'id' | 'sku'>) => {
-    const randomSKU = `SKU-${Math.floor(10000 + Math.random() * 90000)}`;
-    const newP: Producto = {
-      ...p,
-      id: `prod-${Date.now()}`,
-      sku: randomSKU
-    };
+  const handleAddProducto = async (p: Omit<Producto, 'id' | 'sku'>) => {
+    const newP = await api.createProduct(p);
     setProductos(prev => [newP, ...prev]);
   };
 
-  const handleUpdateProducto = (updated: Producto) => {
-    setProductos(prev => prev.map(p => p.id === updated.id ? updated : p));
+  const handleUpdateProducto = async (updated: Producto) => {
+    const saved = await api.updateProduct(updated);
+    setProductos(prev => prev.map(p => p.id === saved.id ? saved : p));
   };
 
-  const handleDeleteProducto = (id: string) => {
+  const handleDeleteProducto = async (id: string) => {
+    await api.deleteProduct(id);
     setProductos(prev => prev.filter(p => p.id !== id));
   };
 
-  const handleAdjustStock = (prodId: string, qty: number) => {
-    setProductos(prev => prev.map(p => {
-      if (p.id === prodId) {
-        return {
-          ...p,
-          stock: Math.max(0, p.stock + qty)
-        };
-      }
-      return p;
-    }));
+  const handleAdjustStock = async (prodId: string, qty: number) => {
+    const saved = await api.adjustStock(prodId, qty, 'Ajuste manual desde inventario');
+    setProductos(prev => prev.map(product => product.id === saved.id ? saved : product));
   };
 
   // F. Oferta actions

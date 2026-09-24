@@ -28,7 +28,7 @@ interface VehiculosProps {
   currentUser: Usuario;
   onAddVehiculo: (v: Omit<Vehiculo, 'id' | 'trabajosRealizados'>) => void;
   onUpdateVehiculo: (v: Vehiculo) => void;
-  onAddClienteRapido: (c: { nombre: string; telefono: string; dui: string; correo: string }) => string;
+  onAddClienteRapido: (c: { nombre: string; telefono: string; dui: string; correo: string }) => Promise<string>;
 }
 
 export function Vehiculos({ 
@@ -162,10 +162,10 @@ export function Vehiculos({
   };
 
   // Quick client creation trigger
-  const handleCreateQuickClient = (e: React.FormEvent) => {
+  const handleCreateQuickClient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!quickClientForm.nombre) return;
-    const newId = onAddClienteRapido({
+    const newId = await onAddClienteRapido({
       nombre: quickClientForm.nombre,
       telefono: quickClientForm.telefono || '0000-0000',
       dui: quickClientForm.dui || '00000000-0',

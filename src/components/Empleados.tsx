@@ -895,7 +895,7 @@ export function Empleados({
                 {/* Page 8 constraint: No se podrá editar contraseña desde admin solo super usuario */}
                 <label className="block mb-1 text-slate-300 flex items-center gap-1">
                   Contraseña 
-                  {!isSuperUser && <LockKeyhole className="w-3 h-3 text-red-500" title="Bloqueado para Administrador" />}
+                  {!isSuperUser && <LockKeyhole className="w-3 h-3 text-red-500" aria-label="Bloqueado para Administrador" />}
                 </label>
                 <input
                   type="password"

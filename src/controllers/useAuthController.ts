@@ -1,7 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Usuario } from '../types';
-import { LocalDataBase } from '../mockData';
-import { authenticateUser } from '../models/authModel';
+import { api, clearApiToken } from '../api';
 
 interface AuthControllerResult {
   isLogged: boolean;
@@ -18,54 +17,28 @@ interface AuthControllerResult {
   updateCurrentUser: (employee: Usuario) => void;
 }
 
-export function useAuthController(employees: Usuario[]): AuthControllerResult {
-  const [isLogged, setIsLogged] = useState(() => LocalDataBase.isLogged());
-  const [currentUser, setCurrentUser] = useState(() => LocalDataBase.getCurrentUser());
+const emptyUser: Usuario = { id: '', nombre: '', dui: '', telefono: '', correo: '', cargo: 'Recepcionista', sueldoBase: 0, porcentajeGanancia: 0, fechaContratacion: '', tieneLicencia: false };
+
+export function useAuthController(): AuthControllerResult {
+  const [isLogged, setIsLogged] = useState(false);
+  const [currentUser, setCurrentUser] = useState(emptyUser);
   const [loginUserDui, setLoginUserDui] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
   useEffect(() => {
-    LocalDataBase.saveLogged(isLogged);
-  }, [isLogged]);
-
-  useEffect(() => {
-    LocalDataBase.saveCurrentUser(currentUser);
-  }, [currentUser]);
-
-  const setAuthenticatedUser = (employee: Usuario) => {
-    setCurrentUser(employee);
-    setIsLogged(true);
-    setLoginError('');
-  };
+    if (!localStorage.getItem('taller_access_token')) return;
+    void api.me().then((user) => { setCurrentUser(user); setIsLogged(true); }).catch(clearApiToken);
+  }, []);
 
   const handleLogin = (event: FormEvent) => {
     event.preventDefault();
-    const employee = authenticateUser(employees, {
-      identifier: loginUserDui,
-      password: loginPassword
-    });
-
-    if (!employee) {
-      const matchingEmployee = employees.find((candidate) =>
-        candidate.dui.replace(/\D/g, '') === loginUserDui.replace(/\D/g, '') ||
-        candidate.nombre.toLowerCase() === loginUserDui.trim().toLowerCase()
-      );
-      setLoginError(matchingEmployee
-        ? 'Contraseña incorrecta. (Pruebe con "123").'
-        : 'DUI o nombre de empleado no identificado.');
-      return;
-    }
-
-    setAuthenticatedUser(employee);
+    void api.login(loginUserDui, loginPassword).then((user) => { setCurrentUser(user); setIsLogged(true); setLoginError(''); setLoginPassword(''); }).catch((error: Error) => setLoginError(error.message));
   };
 
-  const handleQuickLogin = (employee: Usuario) => setAuthenticatedUser(employee);
+  const handleQuickLogin = () => setLoginError('El acceso rápido está deshabilitado. Use sus credenciales.');
 
-  const handleSwitchUserRole = (employee: Usuario) => {
-    setCurrentUser(employee);
-    alert(`Sincronizado perfil de sesión: Se cambió a rol de [${employee.cargo}] con éxito.`);
-  };
+  const handleSwitchUserRole = () => setLoginError('El cambio de usuario requiere iniciar sesión con sus propias credenciales.');
 
   return {
     isLogged,
@@ -77,7 +50,7 @@ export function useAuthController(employees: Usuario[]): AuthControllerResult {
     setLoginPassword,
     handleLogin,
     handleQuickLogin,
-    handleLogout: () => setIsLogged(false),
+    handleLogout: () => { clearApiToken(); setIsLogged(false); setCurrentUser(emptyUser); },
     handleSwitchUserRole,
     updateCurrentUser: setCurrentUser
   };

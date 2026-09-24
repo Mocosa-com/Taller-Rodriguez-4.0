@@ -1,0 +1,302 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMINISTRADOR
+  RECEPCIONISTA
+  MECANICO
+  SUPER_USUARIO
+}
+enum VehicleStatus {
+  EN_REVISION
+  EN_ESPERA
+  ENTREGADO
+}
+enum ProductType {
+  PRODUCTO
+  SERVICIO
+}
+enum InvoiceType {
+  CONSUMIDOR_FINAL
+  CREDITO_FISCAL
+}
+enum InvoiceStatus {
+  ACTIVA
+  ANULADA
+}
+enum ShiftStatus {
+  ABIERTA
+  CERRADA
+}
+
+model User {
+  id String @id @default(uuid()) @db.Uuid
+  name String @db.VarChar(150)
+  dui String @unique @db.VarChar(20)
+  phone String @db.VarChar(30)
+  email String? @unique @db.VarChar(254)
+  role UserRole
+  baseSalary Decimal @default(0) @db.Decimal(12,2)
+  commissionPercent Decimal @default(0) @db.Decimal(5,2)
+  hiredAt DateTime @db.Date
+  hasLicense Boolean @default(false)
+  avatarUrl String?
+  passwordHash String
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  assignedVehicles Vehicle[] @relation("assignedMechanic")
+  shifts CashShift[]
+  invoices Invoice[]
+  inventoryMovements InventoryMovement[]
+  auditLogs AuditLog[]
+  reports EmployeeReport[] @relation("employeeReports")
+  createdReports EmployeeReport[] @relation("createdReports")
+  salaryPayments SalaryPayment[] @relation("employeePayments")
+  paidSalaries SalaryPayment[] @relation("paidPayments")
+  vacations Vacation[]
+  workOrders WorkOrder[] @relation("mechanicWorkOrders")
+  refreshTokens RefreshToken[]
+}
+
+model Customer {
+  id String @id @default(uuid()) @db.Uuid
+  name String @db.VarChar(150)
+  phone String @db.VarChar(30)
+  dui String? @db.VarChar(20)
+  email String? @db.VarChar(254)
+  nit String? @db.VarChar(30)
+  nrc String? @db.VarChar(30)
+  address String
+  visitFrequency String @default("REGULAR") @db.VarChar(30)
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  vehicles Vehicle[]
+  invoices Invoice[]
+}
+
+model Supplier {
+  id String @id @default(uuid()) @db.Uuid
+  name String @db.VarChar(150)
+  phone String @db.VarChar(30)
+  location String @db.VarChar(150)
+  email String? @db.VarChar(254)
+  supplierType String @db.VarChar(20)
+  country String?
+  active Boolean @default(true)
+  products Product[]
+}
+
+model Vehicle {
+  id String @id @default(uuid()) @db.Uuid
+  customerId String @db.Uuid
+  plate String @unique @db.VarChar(20)
+  make String @db.VarChar(80)
+  model String @db.VarChar(80)
+  modelYear Int
+  status VehicleStatus @default(EN_REVISION)
+  intakeAt DateTime @default(now())
+  deliveredAt DateTime?
+  diagnosis String @default("")
+  assignedMechanicId String? @db.Uuid
+  photoUrl String?
+  registrationFrontUrl String?
+  registrationBackUrl String?
+  customer Customer @relation(fields: [customerId], references: [id])
+  assignedMechanic User? @relation("assignedMechanic", fields: [assignedMechanicId], references: [id])
+  workOrders WorkOrder[]
+  invoices Invoice[]
+}
+
+model WorkOrder {
+  id String @id @default(uuid()) @db.Uuid
+  vehicleId String @db.Uuid
+  mechanicId String? @db.Uuid
+  status String @default("ABIERTA")
+  diagnosis String @default("")
+  notes String @default("")
+  openedAt DateTime @default(now())
+  closedAt DateTime?
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+  mechanic User? @relation("mechanicWorkOrders", fields: [mechanicId], references: [id])
+  tasks WorkOrderTask[]
+}
+
+model WorkOrderTask {
+  id String @id @default(uuid()) @db.Uuid
+  workOrderId String @db.Uuid
+  description String
+  completed Boolean @default(false)
+  completedAt DateTime?
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+}
+
+model Product {
+  id String @id @default(uuid()) @db.Uuid
+  sku String @unique @db.VarChar(50)
+  name String @db.VarChar(150)
+  type ProductType
+  stock Decimal @default(0) @db.Decimal(12,3)
+  purchasePrice Decimal @default(0) @db.Decimal(12,2)
+  salePrice Decimal @default(0) @db.Decimal(12,2)
+  supplierId String? @db.Uuid
+  classification String @db.VarChar(100)
+  minimumStock Decimal @default(0) @db.Decimal(12,3)
+  maximumStock Decimal @default(0) @db.Decimal(12,3)
+  description String @default("")
+  active Boolean @default(true)
+  supplier Supplier? @relation(fields: [supplierId], references: [id])
+  items InvoiceItem[]
+  movements InventoryMovement[]
+  offers Offer[]
+}
+
+model Offer {
+  id String @id @default(uuid()) @db.Uuid
+  name String @db.VarChar(150)
+  description String @default("")
+  discountPercent Decimal @db.Decimal(5,2)
+  productId String? @db.Uuid
+  startsAt DateTime @db.Date
+  endsAt DateTime @db.Date
+  active Boolean @default(true)
+  product Product? @relation(fields: [productId], references: [id])
+  invoices Invoice[]
+}
+
+model CashShift {
+  id String @id @default(uuid()) @db.Uuid
+  shiftNumber Int @unique
+  responsibleId String @db.Uuid
+  openedAt DateTime @default(now())
+  closedAt DateTime?
+  openingAmount Decimal @db.Decimal(12,2)
+  expectedAmount Decimal @default(0) @db.Decimal(12,2)
+  countedAmount Decimal? @db.Decimal(12,2)
+  status ShiftStatus @default(ABIERTA)
+  notes String @default("")
+  responsible User @relation(fields: [responsibleId], references: [id])
+  invoices Invoice[]
+}
+
+model Invoice {
+  id String @id @default(uuid()) @db.Uuid
+  code String @unique @db.VarChar(50)
+  customerId String @db.Uuid
+  vehicleId String? @db.Uuid
+  shiftId String @db.Uuid
+  issuedById String @db.Uuid
+  type InvoiceType
+  subtotal Decimal @db.Decimal(12,2)
+  discount Decimal @default(0) @db.Decimal(12,2)
+  taxableBase Decimal @db.Decimal(12,2)
+  tax Decimal @default(0) @db.Decimal(12,2)
+  total Decimal @db.Decimal(12,2)
+  offerId String? @db.Uuid
+  status InvoiceStatus @default(ACTIVA)
+  issuedAt DateTime @default(now())
+  annulledAt DateTime?
+  annulledById String? @db.Uuid
+  annulmentReason String?
+  customer Customer @relation(fields: [customerId], references: [id])
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id])
+  shift CashShift @relation(fields: [shiftId], references: [id])
+  issuedBy User @relation(fields: [issuedById], references: [id])
+  offer Offer? @relation(fields: [offerId], references: [id])
+  items InvoiceItem[]
+  movements InventoryMovement[]
+}
+
+model InvoiceItem {
+  id String @id @default(uuid()) @db.Uuid
+  invoiceId String @db.Uuid
+  productId String @db.Uuid
+  description String @db.VarChar(150)
+  itemType ProductType
+  quantity Decimal @db.Decimal(12,3)
+  unitPrice Decimal @db.Decimal(12,2)
+  lineTotal Decimal @db.Decimal(12,2)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model InventoryMovement {
+  id String @id @default(uuid()) @db.Uuid
+  productId String @db.Uuid
+  invoiceId String? @db.Uuid
+  performedById String @db.Uuid
+  quantity Decimal @db.Decimal(12,3)
+  movementType String @db.VarChar(30)
+  reason String @default("")
+  createdAt DateTime @default(now())
+  product Product @relation(fields: [productId], references: [id])
+  invoice Invoice? @relation(fields: [invoiceId], references: [id])
+  performedBy User @relation(fields: [performedById], references: [id])
+}
+
+model EmployeeReport {
+  id String @id @default(uuid()) @db.Uuid
+  employeeId String @db.Uuid
+  createdById String @db.Uuid
+  type String @db.VarChar(50)
+  summary String @db.VarChar(255)
+  notes String @default("")
+  createdAt DateTime @default(now())
+  employee User @relation("employeeReports", fields: [employeeId], references: [id])
+  createdBy User @relation("createdReports", fields: [createdById], references: [id])
+}
+
+model SalaryPayment {
+  id String @id @default(uuid()) @db.Uuid
+  employeeId String @db.Uuid
+  paidById String @db.Uuid
+  period String @db.VarChar(30)
+  amount Decimal @db.Decimal(12,2)
+  commissionPercent Decimal @default(0) @db.Decimal(5,2)
+  detail String @default("")
+  paidAt DateTime @default(now())
+  employee User @relation("employeePayments", fields: [employeeId], references: [id])
+  paidBy User @relation("paidPayments", fields: [paidById], references: [id])
+}
+
+model Vacation {
+  id String @id @default(uuid()) @db.Uuid
+  employeeId String @db.Uuid
+  startsOn DateTime @db.Date
+  endsOn DateTime @db.Date
+  type String @db.VarChar(50)
+  status String @default("PENDIENTE") @db.VarChar(20)
+  comments String @default("")
+  totalDays Int
+  approvedById String? @db.Uuid
+  employee User @relation(fields: [employeeId], references: [id])
+}
+
+model AuditLog {
+  id String @id @default(uuid()) @db.Uuid
+  actorId String? @db.Uuid
+  action String @db.VarChar(80)
+  entity String @db.VarChar(80)
+  entityId String? @db.Uuid
+  beforeData Json?
+  afterData Json?
+  ip String?
+  createdAt DateTime @default(now())
+  actor User? @relation(fields: [actorId], references: [id])
+}
+
+model RefreshToken {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

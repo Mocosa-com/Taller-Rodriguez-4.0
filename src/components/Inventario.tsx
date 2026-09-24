@@ -153,7 +153,7 @@ export function Inventario({
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.nombre) return;
-    onAddProducto(formData);
+    onAddProducto({ ...formData, stockMaximo: formData.stockMaximum });
     setIsAddOpen(false);
   };
 
@@ -340,7 +340,7 @@ export function Inventario({
                             {p.stock}
                           </span>
                           {isCritical && (
-                            <AlertTriangle className="w-3.5 h-3.5 text-red-400 animate-pulse" title="Mínimo alcanzado" />
+                            <AlertTriangle className="w-3.5 h-3.5 text-red-400 animate-pulse" aria-label="Mínimo alcanzado" />
                           )}
                         </>
                       ) : (
@@ -455,7 +455,7 @@ export function Inventario({
                               {p.stock}
                             </span>
                             {isCritical && (
-                              <AlertTriangle className="w-3.5 h-3.5 text-red-400 animate-pulse" title="Mínimo alcanzado" />
+                              <AlertTriangle className="w-3.5 h-3.5 text-red-400 animate-pulse" aria-label="Mínimo alcanzado" />
                             )}
                           </div>
                         ) : (
