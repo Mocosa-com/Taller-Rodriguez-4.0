@@ -197,11 +197,30 @@ export default function App() {
 
   // D. Emit Factura & Deduct Stocks
   const handleEmitirFactura = async (f: Omit<Factura, 'id' | 'codigo' | 'fecha'>) => {
+    if (useLocalData) {
+      const timestamp = Date.now();
+      const newFact: Factura = {
+        ...f,
+        id: `fact-${timestamp}`,
+        codigo: `FAC-${timestamp.toString().slice(-6)}`,
+        fecha: new Date(timestamp).toISOString().slice(0, 10)
+      };
+      setFacturas(prev => [newFact, ...prev]);
+      setProductos(prev => prev.map(product => {
+        const soldItem = f.items.find(item => item.productoId === product.id);
+        return soldItem && product.tipo === 'Producto'
+          ? { ...product, stock: Math.max(0, product.stock - soldItem.cantidad) }
+          : product;
+      }));
+      return newFact;
+    }
+
     const newFact = await api.createInvoice({ customerId: f.clienteId, vehicleId: f.vehiculoId, type: f.tipo, items: f.items.map(item => ({ productId: item.productoId, quantity: item.cantidad })) });
     setFacturas(prev => [newFact, ...prev]);
     setActiveTurno(await api.activeShift());
     setProductos(await api.products());
     setVehiculos(await api.vehicles());
+    return newFact;
   };
 
   // E. Producto actions
@@ -380,6 +399,7 @@ export default function App() {
             productos={productos}
             ofertas={ofertas}
             activeTurno={activeTurno}
+            cashierName={currentUser.nombre}
             onEmitirFactura={handleEmitirFactura}
           />
         );

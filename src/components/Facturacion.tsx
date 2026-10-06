@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Cliente, Vehiculo, Producto, Oferta, Factura, FacturaItem, TurnoCaja } from '../types';
+import { downloadInvoicePdf } from '../utils/invoicePdf';
 import { 
   ReceiptText, 
   Search, 
@@ -24,7 +25,8 @@ interface FacturacionProps {
   productos: Producto[];
   ofertas: Oferta[];
   activeTurno: TurnoCaja | null;
-  onEmitirFactura: (fact: Omit<Factura, 'id' | 'codigo' | 'fecha'>) => void;
+  cashierName: string;
+  onEmitirFactura: (fact: Omit<Factura, 'id' | 'codigo' | 'fecha'>) => Promise<Factura>;
 }
 
 export function Facturacion({ 
@@ -33,6 +35,7 @@ export function Facturacion({
   productos, 
   ofertas, 
   activeTurno,
+  cashierName,
   onEmitirFactura 
 }: FacturacionProps) {
 
@@ -143,7 +146,7 @@ export function Facturacion({
   };
 
   // Submit invoice processing
-  const handleProcessFactura = (e: React.FormEvent) => {
+  const handleProcessFactura = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!activeTurno) {
@@ -164,26 +167,38 @@ export function Facturacion({
     const client = clientes.find(c => c.id === selectedClienteId);
     const vehicle = vehiculos.find(v => v.id === selectedVehiculoId);
 
-    onEmitirFactura({
-      clienteId: selectedClienteId,
-      clienteNombre: client ? client.nombre : 'Consumidor Final',
-      vehiculoId: selectedVehiculoId || undefined,
-      vehiculoPlaca: vehicle ? vehicle.placa : undefined,
-      tipo: factType,
-      total: totalFactura,
-      items: cartItems,
-      ofertaId: selectedOfertaId || undefined,
-      descuento: discountAmount,
-      estado: 'Activa'
-    });
+    try {
+      const issuedInvoice = await onEmitirFactura({
+        clienteId: selectedClienteId,
+        clienteNombre: client ? client.nombre : 'Consumidor Final',
+        vehiculoId: selectedVehiculoId || undefined,
+        vehiculoPlaca: vehicle ? vehicle.placa : undefined,
+        tipo: factType,
+        total: totalFactura,
+        items: cartItems,
+        ofertaId: selectedOfertaId || undefined,
+        descuento: discountAmount,
+        estado: 'Activa'
+      });
 
-    // Reset checkout desk
-    setCartItems([]);
-    setMontoRecibido('');
-    setCambioDue(null);
-    setSelectedOfertaId('');
-    setCustomDiscount(0);
-    alert('¡Factura procesada con éxito! Se ha impreso el reporte tributario y sincronizado el saldo de caja.');
+      setCartItems([]);
+      setMontoRecibido('');
+      setCambioDue(null);
+      setSelectedOfertaId('');
+      setCustomDiscount(0);
+
+      try {
+        await downloadInvoicePdf(issuedInvoice, cashierName);
+        alert(`Factura ${issuedInvoice.codigo} procesada y descargada en PDF.`);
+      } catch (error) {
+        console.error('La factura se procesó, pero no se pudo generar su PDF.', error);
+        alert(`La factura ${issuedInvoice.codigo} se procesó, pero no se pudo descargar el PDF. Puede intentarlo desde Caja > Facturas.`);
+      }
+    } catch (error) {
+      console.error('No se pudo procesar la factura.', error);
+      const details = error instanceof Error ? `\n${error.message}` : '';
+      alert(`No se pudo procesar la factura. Verifique la conexión e inténtelo de nuevo.${details}`);
+    }
   };
 
   // Filter left available catalog search

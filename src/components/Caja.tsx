@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { TurnoCaja, Factura, Usuario } from '../types';
+import { downloadInvoicePdf } from '../utils/invoicePdf';
 import { 
   Wallet, 
   Clock, 
@@ -108,9 +109,20 @@ export function Caja({
     alert('Efectivo manual de caja ajustado con éxito.');
   };
 
-  // Simple PDF layout trigger
+  // PDF preview trigger
   const handlePrintMockup = (fact: Factura) => {
     setShowPdfInvoice(fact);
+  };
+
+  const handleDownloadPdf = async (fact: Factura) => {
+    try {
+      await downloadInvoicePdf(fact, currentUser.nombre);
+      setShowPdfInvoice(null);
+    } catch (error) {
+      console.error(`No se pudo generar el PDF de la factura ${fact.codigo}.`, error);
+      const details = error instanceof Error ? `\n${error.message}` : '';
+      alert(`No se pudo generar el PDF de la factura ${fact.codigo}.${details}`);
+    }
   };
 
   // Filter invoices for table history
@@ -272,28 +284,28 @@ export function Caja({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-4 border-t border-slate-850">
                   <button
                     onClick={handleCloseBox}
-                    className="flex flex-col items-center justify-center gap-1.5 bg-red-950/30 hover:bg-red-600 hover:text-white text-red-400 transition-all p-3 rounded-xl border border-red-900/30 cursor-pointer"
+                    className="flex flex-col items-center justify-center gap-1.5 bg-red-50 hover:bg-red-600 hover:text-white text-red-600 transition-all p-3 rounded-xl border border-red-200 cursor-pointer"
                   >
                     <Lock className="w-5 h-5" />
                     <span className="text-[10px] font-bold uppercase tracking-wider">Cerrar caja</span>
                   </button>
                   <button
                     onClick={() => onSetView('facturacion')}
-                    className="flex flex-col items-center justify-center gap-1.5 bg-orange-950/30 hover:bg-orange-600 hover:text-white text-orange-400 transition-all p-3 rounded-xl border border-orange-900/30 cursor-pointer"
+                    className="flex flex-col items-center justify-center gap-1.5 bg-orange-50 hover:bg-orange-600 hover:text-white text-orange-600 transition-all p-3 rounded-xl border border-orange-200 cursor-pointer"
                   >
                     <FileText className="w-5 h-5" />
                     <span className="text-[10px] font-bold uppercase tracking-wider font-sans">Facturar</span>
                   </button>
                   <button
                     onClick={() => setCajaSubView('turnos')}
-                    className="flex flex-col items-center justify-center gap-1.5 bg-blue-950/30 hover:bg-blue-600 hover:text-white text-blue-400 transition-all p-3 rounded-xl border border-blue-900/30 cursor-pointer"
+                    className="flex flex-col items-center justify-center gap-1.5 bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-600 transition-all p-3 rounded-xl border border-blue-200 cursor-pointer"
                   >
                     <History className="w-5 h-5" />
                     <span className="text-[10px] font-bold uppercase tracking-wider">Turnos</span>
                   </button>
                   <button
                     onClick={() => setCajaSubView('facturas')}
-                    className="flex flex-col items-center justify-center gap-1.5 bg-indigo-950/30 hover:bg-indigo-600 hover:text-white text-indigo-400 transition-all p-3 rounded-xl border border-indigo-900/30 cursor-pointer"
+                    className="flex flex-col items-center justify-center gap-1.5 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 transition-all p-3 rounded-xl border border-indigo-200 cursor-pointer"
                   >
                     <FileText className="w-5 h-5" />
                     <span className="text-[10px] font-bold uppercase tracking-wider">Facturas</span>
@@ -589,8 +601,8 @@ export function Caja({
 
       {/* Simulated printable invoice modal preview */}
       {showPdfInvoice && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 text-slate-200 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="bg-slate-900 border border-slate-800 text-slate-200 w-full max-w-lg max-h-[calc(100dvh-1.5rem)] rounded-3xl overflow-hidden shadow-2xl animate-in fade-in duration-200 flex flex-col">
             
             <div className="bg-slate-950 text-white p-4 flex justify-between items-center border-b border-slate-800">
               <span className="font-display font-medium text-xs">Pre-visualización de Impresión Fiscal</span>
@@ -602,9 +614,10 @@ export function Caja({
               </button>
             </div>
 
-            <div className="p-8 space-y-6 font-mono text-xs bg-slate-950/60 m-4 rounded-2xl border border-slate-850">
+            <div className="p-5 sm:p-8 space-y-6 font-mono text-xs bg-slate-950/60 m-3 sm:m-4 rounded-2xl border border-slate-850 overflow-y-auto min-h-0 flex-1">
               {/* Header */}
               <div className="text-center space-y-1 pb-4 border-b border-dashed border-slate-800">
+                <img src="/assets/logo_taller.png" alt="Logo Taller Rodríguez" className="w-16 h-16 object-contain mx-auto mb-3" />
                 <h4 className="font-display font-black text-sm uppercase text-white">Taller Rodríguez, S.A. de C.V.</h4>
                 <p className="text-slate-400">AUTOPROP, EL SALVADOR</p>
                 <p className="text-slate-400">TEL: 2121-2828 • NIT: 0614-121218-101-1</p>
@@ -656,14 +669,11 @@ export function Caja({
 
             <div className="bg-slate-950 p-4 border-t border-slate-850 flex justify-end gap-2.5">
               <button
-                onClick={() => {
-                  alert('Instalando plantilla de impresión a ruteadora térmica...');
-                  setShowPdfInvoice(null);
-                }}
+                onClick={() => void handleDownloadPdf(showPdfInvoice)}
                 className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-black px-4 py-2.5 cursor-pointer shadow-md inline-flex items-center gap-1 uppercase tracking-wider"
               >
                 <Printer className="w-3.5 h-3.5" />
-                <span>Imprimir Ticket</span>
+                <span>Descargar PDF</span>
               </button>
             </div>
 
